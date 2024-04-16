@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:voice_recognition/second_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -38,6 +39,8 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _isListening = false;
   String _text = 'Press the button and start speaking';
   Timer? _timer;
+  bool buttonColorInitial=true;
+  bool alarmOn=false;
 
   @override
   void initState() {
@@ -75,7 +78,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         centerTitle: true,
       ),
-
       body: Padding(
         padding: EdgeInsets.only(left: 20.w, right: 20.w, top: 20.w),
         child: Container(
@@ -84,10 +86,50 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Column(
             children: [
               Expanded(
-                flex: 5,
+                flex: 2,
                 child: Text(
                   _text,
                   style: TextStyle(fontSize: 20.w, color: Colors.black),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Container(
+                  width: totalWidth,
+                  decoration:  BoxDecoration(
+                    color: buttonColorInitial ?   Colors.purpleAccent:Colors.pinkAccent ,
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding:  EdgeInsets.all(10.w),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            fixedSize: Size.fromWidth(totalWidth),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.zero)),
+                            elevation: 0,
+                            backgroundColor: Colors.blue
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              buttonColorInitial=!buttonColorInitial;
+                            });
+                          },
+                          child: Padding(
+                            padding:  EdgeInsets.only(top:10.w,bottom: 10.w),
+                            child: Text(
+                              "Change Color",
+                              style: TextStyle(
+                                fontSize: 15.w,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Icon(alarmOn ?Icons.alarm_off:Icons.alarm,color: Colors.white,size: 40.w,)
+                    ],
+                  ),
                 ),
               ),
               Expanded(
@@ -100,35 +142,65 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: Padding(
                       padding: EdgeInsets.all(5.w),
                       child: IconButton(
-                        onPressed: ()  async {
+                        onPressed: () async {
                           if (!_isListening) {
-
                             // Call your function repeatedly while the button is pressed
 
-                              bool available = await speechToText.initialize(
-                                onStatus: (val) => print('onStatus: $val'),
-                                onError: (val) => print('onError: $val'),
-                              );
-                              if (available) {
-                                setState(() => _isListening = true);
-                                _timer = Timer.periodic(Duration(milliseconds: 500), (_)  {
+                            bool available = await speechToText.initialize(
+                              onStatus: (val) => print('onStatus: $val'),
+                              onError: (val) => print('onError: $val'),
+                            );
+                            if (available) {
+                              setState(() => _isListening = true);
+                              _timer = Timer.periodic(
+                                  const Duration(seconds: 1), (_) {
                                 speechToText.listen(
                                   onResult: (val) => setState(() {
                                     _text = val.recognizedWords;
+                                    if (_text.toLowerCase() ==
+                                        "go to next page") {
+                                      setState(() => _isListening = false);
+                                      speechToText.stop();
+                                      _timer?.cancel();
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const SecondPage()));
+                                    }else if (_text.toLowerCase() ==
+                                        "change colour") {
+                                      setState(() {
+                                        buttonColorInitial=!buttonColorInitial;
+                                      });
+                                    }else if (_text.toLowerCase() ==
+                                        "stop voice") {
+                                      setState(() => _isListening = false);
+                                      speechToText.stop();
+                                      _timer?.cancel();
+                                    }else if (_text.toLowerCase() ==
+                                        "alarm on") {
+                                      setState(() {
+                                       alarmOn=true;
+                                      });
+                                    }else if (_text.toLowerCase() ==
+                                        "alarm off") {
+                                      setState(() {
+                                        alarmOn=false;
+                                      });
+                                    }
                                     print(_text);
                                   }),
                                 );
                               });
                             }
-                          }else {
+                          } else {
                             setState(() => _isListening = false);
                             speechToText.stop();
                             _timer?.cancel();
                           }
-
                         },
                         icon: Icon(
-                          _isListening? Icons.mic:Icons.mic_off,
+                          _isListening ? Icons.mic : Icons.mic_off,
                           size: 40.w,
                           color: Colors.white,
                         ),
